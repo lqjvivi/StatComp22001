@@ -1,0 +1,133 @@
+---
+title: "Introduction to the function of R and Rcpp"
+author: "22001"
+date: "`r Sys.Date()`"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Introduction to the R and Rcpp function of StatComp22001}'
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+## Overview
+
+__StatComp22001__ is a simple R package developed to calculate the positive-mean and risk measure. Two functions are considered, namely, _positive.mean_ (calculate the positive parts mean) and _RM_ (calcilate the risk measure of the loss data).  And _gibbsC_ for C++.
+
+
+
+## positive mean
+
+The definition of positive mean is $E(X-d)_{+}$,where d in the actuary calls deductible.
+
+The source R code for _positive.mean_ is as follows:
+```{r,eval=FALSE}
+function(X,d){
+  n=length(X)
+  a=numeric(n)
+  for (i in 1:n) {
+    if(X[i]-d>=0)
+      a[i]=X[i]-d
+    else
+      a[i]=0
+  }
+  return(mean(a))
+}
+```
+
+The above code shows above can calculate the positive mean when you are given a deductible d and it could be used to calculate the positive part of x-d's mean.
+
+##Risk measure
+Some definition of the risk measure:
+
+***Value-at-Risk (VaR)***
+$$
+\operatorname{VaR}_\alpha(X)=\inf \{x \in \mathbb{R} \mid F(x) \geq \alpha\}, \quad \alpha \in(0,1]
+$$
+***Conditional VaR (CVaR)***
+$$
+\operatorname{CVaR}_\alpha(X)=\frac{1}{1-\alpha} \int_\alpha^1 \operatorname{VaR}_u(X) \mathrm{du} .
+$$
+
+***Distortion risk measure***
+
+
+$$
+\rho_h(X)=\int_0^1 F^{-1}(\alpha) \operatorname{dh}(\alpha)
+$$
+Where $h:[0,1] \rightarrow[0,1]$ satisfies $h$ increasing and convex, and $h(0)=h(0+)=0, h(1)=h(1-)=1$. 
+
+***Shortfall risk measure***
+
+$$
+S R_{l, \lambda}^P(Z):=\inf _{t \in \mathbb{R}}\left\{t: \mathbb{E}_P[l(-Z-t)] \leq \lambda\right\}
+$$
+
+The source R code for _RM_ is as follows:
+
+```{r,eval=FALSE}
+function(X,alpha,measure=c('VaR','CVaR','Distortion','Shortfall'),lambda){
+  if(measure=='VaR')
+  {VaR<-unname(quantile(X,1-alpha))
+  return(abs(VaR))
+  }
+  if(measure=='CVaR')
+  {f=function(x)
+    x+1/(1-alpha)*positive.mean(X,x)
+  CVaR=optimize(f,lower = quantile(X,1-alpha),upper = max(X))
+  return(CVaR$objective)
+  }
+  if(measure=='Distortion')
+  {
+    f=function(x)
+      quantile(X,1-x)*3*x^2
+    D=integrate(f,0,1)$value
+    return(abs(D))
+  }
+  if(measure=='Shortfall')
+  {
+    f=function(x)
+      mean(-exp(-(X+x))>=-lambda)
+    S=optimize(f,lower = 0,upper = max(X))
+    return(S$objective)
+  }
+}
+```
+
+It could be used to calculate the loss of risk measure,such as VaR,CVaR,Distortion and Shortfall.It can be noted that this function has used 'quantile' ,'optimize' function to quantify the loss risk.
+
+The example shows as follows:
+
+```{r,eval=TRUE}
+library(StatComp22001)
+set.seed(1234)
+X<-rnorm(100,0,4)
+RM(X,0.9,measure='VaR')
+RM(X,0.9,measure='CVaR')
+RM(X,measure='Distortion')
+RM(X,measure='Shortfall',lambda=20)
+```
+
+
+
+
+##  _gibbsC_
+
+ The C++ code is as follows.
+
+```{r,eval=FALSE}
+NumericMatrix gibbsC(int N, int thin) {
+  NumericMatrix mat(N, 2);
+  double x = 0, y = 0;
+  for(int i = 0; i < N; i++) {
+    for(int j = 0; j < thin; j++) {
+      x = rgamma(1, 3, 1 / (y * y + 4))[0];
+      y = rnorm(1, 1 / (x + 1), 1 / sqrt(2 * (x + 1)))[0];
+    }
+    mat(i, 0) = x;
+    mat(i, 1) = y;
+  }
+  return(mat);
+}
+```
+
+It's the homework from the course of 'statistic computation',which can be used to generate the sample by Gibbs method.

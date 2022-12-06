@@ -1,0 +1,17 @@
+Package: StatComp22001
+Type: Package
+Title: Some Risk Measure computed in this package
+Version: 1.0
+Date: 2022-11-25
+Author: ll22001
+Maintainer: ll22001 <459435706@qq.com>
+Description: Several R and Rcpp function are included in this package for illustration.You can use it to calculate some risk measure such as VaR,CVaR,distortion,shortfall risk measure.
+License: GPL (>= 2)
+Imports: Rcpp
+Suggests: knitr, rmarkdown, TSA, mediation, DAAG, MASS, boot, bootstrap, microbenchmark
+VignetteBuilder: knitr
+LinkingTo: Rcpp
+RoxygenNote: 7.2.2
+Encoding: UTF-8
+URL: https://github.com/lqjvivi/StatComp22001
+BugReports: http://github.com/lqjvivi/StatComp22001/issues
